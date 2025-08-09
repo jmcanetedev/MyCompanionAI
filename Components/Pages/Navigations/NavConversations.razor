@@ -1,0 +1,51 @@
+﻿@using Radzen
+
+<PageTitle>AI Sidebar</PageTitle>
+
+<div style="display: flex; height: 100vh;">
+
+    <!-- Sidebar -->
+    <RadzenCard Style="width: 250px; display: flex; flex-direction: column; background-color: var(--rz-layout-background-color); color: white; padding: 10px;">
+
+        <!-- New Conversation Button -->
+        <RadzenButton Text="New Conversation"
+                      Icon="add_circle_outline"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Style="margin-bottom: 15px; width: 100%;"
+                      Click="@NewConversation" />
+
+        <!-- Conversation List -->
+        <RadzenListBox @bind-Value="@selectedConversation"
+                       Data="@conversations"
+                       Style="flex: 1; background-color:  var(--rz-card-background-color) color: white;"
+                       Change="@ConversationSelected">
+            <Template Context="item">
+                <span>@item</span>
+            </Template>
+        </RadzenListBox>
+
+    </RadzenCard>
+</div>
+
+@code {
+    private List<string> conversations = new List<string>
+    {
+        "Conversation 1",
+        "Conversation 2",
+        "Conversation 3"
+    };
+
+    private string selectedConversation = "Conversation 1";
+
+    private void NewConversation()
+    {
+        var newConv = $"Conversation {conversations.Count + 1}";
+        conversations.Insert(0, newConv);
+        selectedConversation = newConv;
+    }
+
+    private void ConversationSelected(object value)
+    {
+        selectedConversation = value?.ToString();
+    }
+}

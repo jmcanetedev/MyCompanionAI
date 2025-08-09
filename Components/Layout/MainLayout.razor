@@ -1,0 +1,54 @@
+﻿@using MyCompanionAI.Components.Pages.Navigations
+
+@inherits LayoutComponentBase
+<RadzenComponents @rendermode="InteractiveServer" />
+   <RadzenLayout style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body';">
+        <RadzenHeader>
+            <RadzenRow JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0">
+                <RadzenColumn Size="5">
+                    <RadzenSidebarToggle Click="@SidebarToggleClick"></RadzenSidebarToggle>
+                </RadzenColumn>
+                <RadzenColumn Size="7">
+                    <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+                       
+                        <RadzenProfileMenu Click="@ProfileMenuClick">
+                            <ChildContent>
+                               
+                            </ChildContent>
+                            <Template>
+                                <span class="avatar avatar-sm rounded-5 text-bg-primary mx-1">Guest</span>
+                            </Template>
+                        </RadzenProfileMenu>
+                    </RadzenStack>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenHeader>
+        <RadzenBody Expanded="@sidebarExpanded">
+            @Body
+        </RadzenBody>
+        <RadzenSidebar Expanded="@sidebarExpanded" style="z-index: 2">
+            <RadzenStack AlignItems="Radzen.AlignItems.Center" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding); border-bottom: var(--rz-panel-menu-item-border);">
+                <RadzenImage Path="images/mycompanion.png" style="width: 88px; height: 88px;" AlternateText="Application logo"></RadzenImage>
+                <RadzenText Text="My Companion" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" class="rz-mb-0" style="color: var(--rz-sidebar-color);" />
+            </RadzenStack>
+            <RadzenPanelMenu>
+                <NavConversations />
+            </RadzenPanelMenu>
+            <RadzenStack AlignItems="Radzen.AlignItems.Center" Gap="0" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding); color:white !important;">
+                <RadzenText Text="MyCompanion v1.0.0" TextStyle="Radzen.Blazor.TextStyle.Caption" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" />
+                <RadzenText Text=@string.Format($"Copyright Ⓒ {@DateTime.UtcNow.Year.ToString()}") TextStyle="Radzen.Blazor.TextStyle.Caption" class="rz-mb-0" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" />
+            </RadzenStack>
+        </RadzenSidebar>
+    </RadzenLayout>
+@code{
+    private bool sidebarExpanded{ get; set; }
+    void SidebarToggleClick()
+    {
+        sidebarExpanded = !sidebarExpanded;
+    }
+
+    protected void ProfileMenuClick(RadzenProfileMenuItem args)
+    {
+       
+    }
+}

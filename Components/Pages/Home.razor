@@ -1,0 +1,64 @@
+﻿@page "/"
+
+@using Radzen
+
+<PageTitle>AI Chat</PageTitle>
+
+<!-- Main Card Container -->
+<RadzenCard Style="height: 90vh; display: flex; flex-direction: column;">
+  @*   <HeaderTemplate>
+        <h3>My Companion</h3>
+    </HeaderTemplate> *@
+
+    <!-- Chat History Area -->
+    <RadzenPanel Style="flex: 1; overflow-y: auto;  padding: 15px;" Collapsed="false">
+        @foreach (var msg in chatMessages)
+        {
+            <RadzenCard Style=@(msg.IsUser ? "margin-bottom: 10px; max-width: 80%; margin-left:auto; background-color:#0B6FDB;" : "margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;")>
+                <ChildContent>
+                    <b>@(msg.IsUser ? "You" : "AI")</b>
+                    <div>@msg.Text</div>
+                </ChildContent>
+            </RadzenCard>
+        }
+    </RadzenPanel>
+
+    <!-- Input Area -->
+    <RadzenCard Style="border-top: 1px solid #ccc; padding: 10px; display: flex; align-items: center;">
+        <RadzenTextArea 
+            @bind-Value="@promptText" 
+            Rows="2" 
+            Placeholder="Type your message..." 
+            Style="flex: 1; margin-right: 10px;" />
+        <RadzenButton 
+            Text="Send" 
+            Icon="send" 
+            ButtonStyle="ButtonStyle.Primary" 
+            Click="@SendMessage" />
+    </RadzenCard>
+</RadzenCard>
+
+@code {
+    private string promptText;
+    private List<ChatMessage> chatMessages = new();
+
+    private void SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(promptText))
+        {
+            // Add user message
+            chatMessages.Add(new ChatMessage { Text = promptText, IsUser = true });
+
+            // Simulate AI response
+            chatMessages.Add(new ChatMessage { Text = $"🤖 AI Response for: {promptText}", IsUser = false });
+
+            promptText = string.Empty;
+        }
+    }
+
+    public class ChatMessage
+    {
+        public string Text { get; set; }
+        public bool IsUser { get; set; }
+    }
+}

@@ -4,7 +4,6 @@ namespace MyCompanionAI.Data.Models;
 
 public class _BaseEntity
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public Guid Id { get; set; }
     public DateTime CreatedOn { get; set; }
     public DateTime UpdatedOn { get; set; }

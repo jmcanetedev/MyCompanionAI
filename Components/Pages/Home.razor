@@ -1,23 +1,38 @@
 ﻿@page "/"
-
-@using Radzen
-
+@using Microsoft.Extensions.AI
+@using MyCompanionAI.Common
+@inject IChatService ChatService
+@inject IChatClient ChatClient
+@inject NotificationService NotificationService
 <PageTitle>AI Chat</PageTitle>
 
 <!-- Main Card Container -->
 <RadzenCard Style="height: 90vh; display: flex; flex-direction: column;">
-  @*   <HeaderTemplate>
-        <h3>My Companion</h3>
-    </HeaderTemplate> *@
-
-    <!-- Chat History Area -->
     <RadzenPanel Style="flex: 1; overflow-y: auto;  padding: 15px;" Collapsed="false">
-        @foreach (var msg in chatMessages)
+        @foreach (var msg in ChatHistory)
         {
-            <RadzenCard Style=@(msg.IsUser ? "margin-bottom: 10px; max-width: 80%; margin-left:auto; background-color:#0B6FDB;" : "margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;")>
+            <RadzenCard Style=@(msg.Role == ChatRole.User ? "margin-bottom: 10px; max-width: 80%; margin-left:auto; background-color:#0B6FDB;" : "margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;")>
                 <ChildContent>
-                    <b>@(msg.IsUser ? "You" : "AI")</b>
-                    <div>@msg.Text</div>
+                    <b>@(msg.Role == ChatRole.User ? "You" : "AI")</b>
+                    <div>@((MarkupString)Helper.ToHtml(msg.Text))</div>
+                </ChildContent>
+            </RadzenCard>
+        }
+        @if (isProcessing)
+        {
+            <RadzenCard Style="margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;">
+                <ChildContent>
+                    <strong>AI</strong>
+                    @if(string.IsNullOrEmpty(response))
+                    {
+                        <div><span class="loading-indicator">Thinking...</span></div>
+                    }
+                    else
+                    {
+                        <div>@((MarkupString)Helper.ToHtml(response))</div>
+                    }
+    
+                  
                 </ChildContent>
             </RadzenCard>
         }
@@ -25,40 +40,104 @@
 
     <!-- Input Area -->
     <RadzenCard Style="border-top: 1px solid #ccc; padding: 10px; display: flex; align-items: center;">
-        <RadzenTextArea 
-            @bind-Value="@promptText" 
-            Rows="2" 
-            Placeholder="Type your message..." 
-            Style="flex: 1; margin-right: 10px;" />
-        <RadzenButton 
-            Text="Send" 
-            Icon="send" 
-            ButtonStyle="ButtonStyle.Primary" 
-            Click="@SendMessage" />
+        <RadzenTextArea @bind-Value="@promptText"
+                        Rows="2"
+                        Placeholder="Type your message..." @onkeydown="HandleKeyPress"
+                        Style="flex: 1; margin-right: 10px;" />
+        <RadzenButton Text="Send"
+                      Icon="send"
+                      ButtonStyle="ButtonStyle.Primary" Disabled="@isProcessing"
+                      Click="@SendMessage" />
     </RadzenCard>
 </RadzenCard>
 
 @code {
     private string promptText;
-    private List<ChatMessage> chatMessages = new();
+    private string response = string.Empty;
+    private List<ChatMessage> ChatHistory = [];
 
-    private void SendMessage()
+    [SupplyParameterFromQuery]
+    [Parameter]
+    public Guid ConversationId { get; set; }
+
+    private List<ChatDto> Chats { get; set; } = [];
+    private bool isProcessing = false;
+    protected override async Task OnInitializedAsync()
     {
-        if (!string.IsNullOrWhiteSpace(promptText))
-        {
-            // Add user message
-            chatMessages.Add(new ChatMessage { Text = promptText, IsUser = true });
-
-            // Simulate AI response
-            chatMessages.Add(new ChatMessage { Text = $"🤖 AI Response for: {promptText}", IsUser = false });
-
-            promptText = string.Empty;
-        }
+        await LoadData();
     }
-
-    public class ChatMessage
+    protected override async Task OnParametersSetAsync()
     {
-        public string Text { get; set; }
-        public bool IsUser { get; set; }
+        await LoadData();
+    }
+    private async Task LoadData()
+    {
+        try
+        {
+            if (ConversationId == Guid.Empty)
+                return;
+
+            Chats = await ChatService.GetChatsAsync(ConversationId);
+            ChatHistory = Helper.ConvertToChatMessages(Chats);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = ex.Message
+            });
+        }
+
+    }
+    private async Task SendMessage()
+    {
+        isProcessing = true;
+        try
+        {
+
+            if (!string.IsNullOrWhiteSpace(promptText))
+            {
+                ChatHistory.Add(new ChatMessage(ChatRole.User, promptText));
+
+                var option = new ChatOptions() { AllowMultipleToolCalls = true, Temperature = 0.4f, MaxOutputTokens = 1000 };
+                await foreach (var update in ChatClient.GetStreamingResponseAsync(ChatHistory, option))
+                {
+                    response += update.Text;
+                    StateHasChanged();
+                }
+
+                ChatHistory.Add(new ChatMessage(ChatRole.Assistant, response));
+
+               
+                var success = await ChatService.SaveAllChatAsync(ChatHistory, ConversationId);
+                
+               
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = ex.Message
+            });
+        }
+        finally
+        {
+            response = string.Empty;
+            promptText = string.Empty;
+            isProcessing = false;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
     }
 }

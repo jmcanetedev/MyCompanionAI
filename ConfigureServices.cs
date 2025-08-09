@@ -31,7 +31,10 @@ public static class ConfigureServices
 
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IChatService, ChatService>();
-
+        services.AddHttpClient<OllamaApiClient>(client =>
+        {
+           client.Timeout = TimeSpan.FromMinutes(5);
+        });
         services.AddHttpClient("MyCompanionAI", client =>
         {
             var url = $"{config["MyCompanionAI:BaseUrl"]}/api";
@@ -45,10 +48,7 @@ public static class ConfigureServices
         var url = $"{config["MyCompanionAI:BaseUrl"]}";
         var model = $"{config["MyCompanionAI:Model"]}";
 
-        services.AddSingleton<IChatClient>(new OllamaApiClient(url)
-        {
-            SelectedModel = model
-        });
+        services.AddSingleton<IChatClient>(new OllamaApiClient(url, model));
 
         return services;
     }

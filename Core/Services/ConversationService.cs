@@ -8,13 +8,11 @@ using MyCompanionAI.Data.Models;
 
 namespace MyCompanionAI.Core.Services;
 
-public class ConversationService : _BaseService,IConversationService
+public class ConversationService : _BaseService, IConversationService
 {
    
-    public ConversationService(IDbContextFactory<MyCompanionDbContext> context, IMapper mapper, IMemoryCache cache) : base(context, mapper, cache)
-    {
-        _mapper = mapper;
-    }
+    private const string CacheKey = "ConversationsCache";
+    public ConversationService(IDbContextFactory<MyCompanionDbContext> context, IMapper mapper, IMemoryCache cache) : base(context, mapper, cache) { }
     public async Task<bool> DeleteConversationAsync(Guid conversationId)
     {
         using var dbContexxt = await context.CreateDbContextAsync();
@@ -29,6 +27,12 @@ public class ConversationService : _BaseService,IConversationService
         dbContexxt.Conversations.Remove(conversation);
         
         var result = await dbContexxt.SaveChangesAsync();
+
+        if (result > 0)
+        {
+            // Invalidate the cache since a conversation was deleted
+            _cache.Remove(CacheKey);
+        }
 
         return result > 0; // Return true if any changes were made
 
@@ -48,13 +52,24 @@ public class ConversationService : _BaseService,IConversationService
 
     public async Task<List<ConversationDto>> GetConversationsAsync()
     {
-        using var dbContext = await context.CreateDbContextAsync();
+        // Check if the conversations are cached
+        if (!_cache.TryGetValue(CacheKey, out List<ConversationDto> cachedConversations))
+        {
+            using var dbContext = await context.CreateDbContextAsync();
 
-        var conversations = await dbContext.Conversations.ToListAsync();
+            var conversations = await dbContext.Conversations.OrderByDescending(c=>c.CreatedOn).ToListAsync();
 
-        var mappedConversations = _mapper.Map<List<ConversationDto>>(conversations);    
+            cachedConversations = _mapper.Map<List<ConversationDto>>(conversations);
 
-        return mappedConversations.Count != 0 ? mappedConversations : new List<ConversationDto>();
+            // Update the cache with the latest conversations
+            _cache.Set(CacheKey, cachedConversations, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) // Cache for 10 minutes
+            });
+
+        }
+
+        return cachedConversations.Count != 0 ? cachedConversations : [];
     }
 
     public async Task<bool> SaveConversation(ConversationDto conversationDto)
@@ -69,10 +84,23 @@ public class ConversationService : _BaseService,IConversationService
         if (existingConversation != null)
             return false; // Conversation already exists
 
+        existingConversation = await dbContext.Conversations.FirstOrDefaultAsync(c => string.IsNullOrEmpty(c.Title));
+
+        if (existingConversation != null)
+            return false; // Conversation with empty title already exists
+        
+        conversation.CreatedOn = DateTime.UtcNow;
+
         dbContext.Conversations.Add(conversation);
 
         var result = await dbContext.SaveChangesAsync();
-        
+
+        if (result > 0)
+        {
+            // Invalidate the cache since a new conversation was added
+            _cache.Remove(CacheKey);
+        }
+
         return result > 0; // Return true if any changes were made
     }
 
@@ -91,6 +119,12 @@ public class ConversationService : _BaseService,IConversationService
         dbContext.Conversations.Update(existingConversation);
         
         var result = await dbContext.SaveChangesAsync();
+
+        if (result > 0)
+        {
+            // Invalidate the cache since a conversation was updated
+            _cache.Remove(CacheKey);
+        }
 
         return result > 0; // Return true if any changes were made
 

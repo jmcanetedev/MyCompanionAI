@@ -1,6 +1,6 @@
-﻿@using Radzen
-
-<PageTitle>AI Sidebar</PageTitle>
+﻿@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject IConversationService ConversationService
 
 <div style="display: flex; height: 100vh;">
 
@@ -15,12 +15,13 @@
                       Click="@NewConversation" />
 
         <!-- Conversation List -->
-        <RadzenListBox @bind-Value="@selectedConversation"
-                       Data="@conversations"
+        <RadzenListBox @bind-Value="@SelectedConversation"
+                       Data="@Conversations"
+                       TValue="ConversationDto"
                        Style="flex: 1; background-color:  var(--rz-card-background-color) color: white;"
                        Change="@ConversationSelected">
             <Template Context="item">
-                <span>@item</span>
+                <span>@item.Title</span>
             </Template>
         </RadzenListBox>
 
@@ -28,24 +29,82 @@
 </div>
 
 @code {
-    private List<string> conversations = new List<string>
-    {
-        "Conversation 1",
-        "Conversation 2",
-        "Conversation 3"
-    };
+    private List<ConversationDto> Conversations { get; set; } = [];
 
-    private string selectedConversation = "Conversation 1";
-
-    private void NewConversation()
+    private ConversationDto SelectedConversation { get; set; }
+    protected override async Task OnInitializedAsync()
     {
-        var newConv = $"Conversation {conversations.Count + 1}";
-        conversations.Insert(0, newConv);
-        selectedConversation = newConv;
+        await LoadData();
+    }
+    private async Task LoadData()
+    {
+        try
+        {
+            await NewConversation();
+
+            Conversations = await ConversationService.GetConversationsAsync();
+
+            if (Conversations.Any())
+            {
+                SelectedConversation = Conversations.FirstOrDefault();
+                if(SelectedConversation is not null)
+                {
+                    ConversationSelected(SelectedConversation);
+                }
+            }
+        }catch(Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = ex.Message
+            });
+        }
+    }
+    private async Task NewConversation()
+    {
+        var conversation = new ConversationDto
+        {
+            Id = Guid.NewGuid(),
+            Title = "",
+        };
+        try
+        {
+            var success = await ConversationService.SaveConversation(conversation);
+            if (success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Success",
+                    Detail = "New conversation created successfully."
+                });
+                NavigationManager.NavigateTo($"/?ConversationId={conversation.Id}");
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Warning",
+                    Detail = "There already an empty conversation."
+                });
+            }
+        }
+        catch(Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = ex.Message
+            });
+        }
     }
 
     private void ConversationSelected(object value)
     {
-        selectedConversation = value?.ToString();
+        NavigationManager.NavigateTo($"/?ConversationId={((ConversationDto)value).Id}");
     }
 }

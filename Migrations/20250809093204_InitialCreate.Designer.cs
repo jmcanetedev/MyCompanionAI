@@ -9,11 +9,11 @@ using MyCompanionAI.Data;
 
 #nullable disable
 
-namespace MyCompanionAI.Data.Migrations
+namespace MyCompanionAI.Migrations
 {
     [DbContext(typeof(MyCompanionDbContext))]
-    [Migration("20250809023925_add_conversation_title")]
-    partial class add_conversation_title
+    [Migration("20250809093204_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -236,14 +236,11 @@ namespace MyCompanionAI.Data.Migrations
 
             modelBuilder.Entity("MyCompanionAI.Data.Models.Chat", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ConversationId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -278,11 +275,8 @@ namespace MyCompanionAI.Data.Migrations
 
             modelBuilder.Entity("MyCompanionAI.Data.Models.Conversation", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");

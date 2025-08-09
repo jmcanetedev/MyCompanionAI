@@ -8,7 +8,7 @@ using MyCompanionAI.Data;
 
 #nullable disable
 
-namespace MyCompanionAI.Data.Migrations
+namespace MyCompanionAI.Migrations
 {
     [DbContext(typeof(MyCompanionDbContext))]
     partial class MyCompanionDbContextModelSnapshot : ModelSnapshot
@@ -233,14 +233,11 @@ namespace MyCompanionAI.Data.Migrations
 
             modelBuilder.Entity("MyCompanionAI.Data.Models.Chat", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ConversationId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -270,16 +267,13 @@ namespace MyCompanionAI.Data.Migrations
 
                     b.HasIndex("ConversationId");
 
-                    b.ToTable("Chats");
+                    b.ToTable("Chats", (string)null);
                 });
 
             modelBuilder.Entity("MyCompanionAI.Data.Models.Conversation", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -307,7 +301,7 @@ namespace MyCompanionAI.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Conversations");
+                    b.ToTable("Conversations", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

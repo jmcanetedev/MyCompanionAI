@@ -9,6 +9,5 @@ public class Chat : _BaseEntity
     public Guid ConversationId { get; set; }
     public string Message { get; set; } = string.Empty;
     public CompanionChatRole Role { get; set; } = CompanionChatRole.User;
-   
     public Conversation Conversation { get; set; }
 }

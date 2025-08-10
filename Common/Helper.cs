@@ -1,5 +1,4 @@
-﻿using Azure;
-using Markdig;
+﻿using Markdig;
 using Microsoft.Extensions.AI;
 using MyCompanionAI.Core.DTOs;
 using MyCompanionAI.Core.Enums;

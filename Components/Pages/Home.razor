@@ -1,6 +1,5 @@
 ﻿@page "/"
-@using Microsoft.Extensions.AI
-@using MyCompanionAI.Common
+
 @inject IChatService ChatService
 @inject IChatClient ChatClient
 @inject NotificationService NotificationService
@@ -42,7 +41,7 @@
     <RadzenCard Style="border-top: 1px solid #ccc; padding: 10px; display: flex; align-items: center;">
         <RadzenTextArea @bind-Value="@promptText"
                         Rows="2"
-                        Placeholder="Type your message..." @onkeydown="HandleKeyPress"
+                        Placeholder="Type your message..." @onkeydown="HandleKeyPress" 
                         Style="flex: 1; margin-right: 10px;" />
         <RadzenButton Text="Send"
                       Icon="send"

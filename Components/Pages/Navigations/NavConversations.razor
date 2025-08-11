@@ -32,10 +32,12 @@
     private List<ConversationDto> Conversations { get; set; } = [];
 
     private ConversationDto SelectedConversation { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
     }
+
     private async Task LoadData()
     {
         try
@@ -62,6 +64,7 @@
             });
         }
     }
+
     private async Task NewConversation()
     {
         var conversation = new ConversationDto

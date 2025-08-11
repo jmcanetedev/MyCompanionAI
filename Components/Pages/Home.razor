@@ -2,53 +2,86 @@
 
 @inject IChatService ChatService
 @inject IChatClient ChatClient
+@inject IJSRuntime JSRuntime
 @inject NotificationService NotificationService
 <PageTitle>AI Chat</PageTitle>
 
-<!-- Main Card Container -->
-<RadzenCard Style="height: 90vh; display: flex; flex-direction: column;">
-    <RadzenPanel Style="flex: 1; overflow-y: auto;  padding: 15px;" Collapsed="false">
-        @foreach (var msg in ChatHistory)
-        {
-            <RadzenCard Style=@(msg.Role == ChatRole.User ? "margin-bottom: 10px; max-width: 80%; margin-left:auto; background-color:#0B6FDB;" : "margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;")>
-                <ChildContent>
-                    <b>@(msg.Role == ChatRole.User ? "You" : "AI")</b>
-                    <div>@((MarkupString)Helper.ToHtml(msg.Text))</div>
-                </ChildContent>
-            </RadzenCard>
-        }
-        @if (isProcessing)
-        {
-            <RadzenCard Style="margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;">
-                <ChildContent>
-                    <strong>AI</strong>
-                    @if(string.IsNullOrEmpty(response))
-                    {
-                        <div><span class="loading-indicator">Thinking...</span></div>
-                    }
-                    else
-                    {
-                        <div>@((MarkupString)Helper.ToHtml(response))</div>
-                    }
-    
-                  
-                </ChildContent>
-            </RadzenCard>
-        }
-    </RadzenPanel>
+@if (ChatHistory == null || !ChatHistory.Any())
+{
 
-    <!-- Input Area -->
-    <RadzenCard Style="border-top: 1px solid #ccc; padding: 10px; display: flex; align-items: center;">
-        <RadzenTextArea @bind-Value="@promptText"
-                        Rows="2"
-                        Placeholder="Type your message..." @onkeydown="HandleKeyPress" 
-                        Style="flex: 1; margin-right: 10px;" />
-        <RadzenButton Text="Send"
-                      Icon="send"
-                      ButtonStyle="ButtonStyle.Primary" Disabled="@isProcessing"
-                      Click="@SendMessage" />
+    <div style="height: 90vh; display: flex; justify-content: center; align-items: center;">
+        <RadzenCard Style="width: 100%; max-width: 600px; padding: 20px;">
+
+
+            <h3 style="margin-bottom: 15px;display: flex; justify-content: center; align-items: center;">Start the conversation</h3>
+
+
+            <RadzenTextArea @bind-Value="@promptText"
+                            Rows="2"
+                            Placeholder="Type your message..."
+                            @onkeydown="HandleKeyPress"
+                            Style="width: 100%; margin-bottom: 10px;" />
+
+
+            <div style="display: flex; justify-content: flex-end;">
+                <RadzenButton Text="Send"
+                              Icon="send"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Disabled="@isProcessing"
+                              Click="@SendMessage" />
+            </div>
+
+        </RadzenCard>
+    </div>
+}
+else
+{
+
+    <RadzenCard Style="height: 90vh; display: flex; flex-direction: column;">
+        <RadzenPanel Style="flex: 1; overflow-y: auto; padding: 15px;" Collapsed="false">
+            @foreach (var msg in ChatHistory)
+            {
+                <RadzenCard Style=@(msg.Role == ChatRole.User ? "margin-bottom: 10px; max-width: 80%; margin-left:auto; background-color:#0B6FDB;" : "margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;")>
+                    <ChildContent>
+                        <b>@(msg.Role == ChatRole.User ? "You" : "AI")</b>
+                        <div>@((MarkupString)Helper.ToHtml(msg.Text))</div>
+                    </ChildContent>
+                </RadzenCard>
+            }
+
+            @if (isProcessing)
+            {
+                <RadzenCard Style="margin-bottom: 10px; max-width: 80%; background-color:#EBF4FF; color:black; border:1px solid #ddd;">
+                    <ChildContent>
+                        <strong>AI</strong>
+                        @if (string.IsNullOrEmpty(response))
+                        {
+                            <div><span class="loading-indicator">Thinking...</span></div>
+                        }
+                        else
+                        {
+                            <div>@((MarkupString)Helper.ToHtml(response))</div>
+                        }
+                    </ChildContent>
+                </RadzenCard>
+            }
+        </RadzenPanel>
+
+     
+        <RadzenCard Style="border-top: 1px solid #ccc; padding: 10px; display: flex; align-items: center;">
+            <RadzenTextArea @bind-Value="@promptText"
+                            Rows="2" Disabled=@isProcessing
+                            Placeholder="Type your message..."
+                            @onkeydown="HandleKeyPress"
+                            Style="flex: 1; margin-right: 10px;" />
+            <RadzenButton Text="Send"
+                          Icon="send"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Disabled="@isProcessing"
+                          Click="@SendMessage" />
+        </RadzenCard>
     </RadzenCard>
-</RadzenCard>
+}
 
 @code {
     private string promptText;
@@ -78,6 +111,7 @@
 
             Chats = await ChatService.GetChatsAsync(ConversationId);
             ChatHistory = Helper.ConvertToChatMessages(Chats);
+            await JSRuntime.InvokeVoidAsync("Prism.highlightAll");
         }
         catch (Exception ex)
         {
@@ -90,6 +124,16 @@
         }
 
     }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("Prism.highlightAll");
+        }catch(Exception ex)
+        {
+            
+        }
+    }
     private async Task SendMessage()
     {
         isProcessing = true;
@@ -100,7 +144,8 @@
             {
                 ChatHistory.Add(new ChatMessage(ChatRole.User, promptText));
 
-                var option = new ChatOptions() { AllowMultipleToolCalls = true, Temperature = 0.4f, MaxOutputTokens = 1000 };
+                var option = new ChatOptions() { AllowMultipleToolCalls = true, Temperature = 0.7f, MaxOutputTokens = 8192, TopP=0.9f };
+
                 await foreach (var update in ChatClient.GetStreamingResponseAsync(ChatHistory, option))
                 {
                     response += update.Text;
@@ -108,10 +153,12 @@
                 }
 
                 ChatHistory.Add(new ChatMessage(ChatRole.Assistant, response));
-
-               
-                var success = await ChatService.SaveAllChatAsync(ChatHistory, ConversationId);
-                
+                //Save All Chat History
+                await ChatService.SaveAllChatAsync(ChatHistory, ConversationId);
+                //Scroll to bottom
+                await JSRuntime.InvokeVoidAsync("scrollToBottom");
+                //High Light Code Structure
+                await JSRuntime.InvokeVoidAsync("Prism.highlightAll");
                
             }
         }

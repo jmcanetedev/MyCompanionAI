@@ -12,7 +12,11 @@ namespace MyCompanionAI.Core.Services;
 public class ChatService : _BaseService, IChatService
 {
     private const string CacheKey = "ChatsCache";
-    public ChatService(IDbContextFactory<MyCompanionDbContext> context, IMapper mapper, IMemoryCache cache) : base(context, mapper, cache) { }
+    private IConversationService _conversationService;
+    public ChatService(IDbContextFactory<MyCompanionDbContext> context, IMapper mapper, IMemoryCache cache, IConversationService conversationService) : base(context, mapper, cache) 
+    {
+        _conversationService = conversationService;
+    }
     public async Task<List<ChatDto>> GetChatsAsync(Guid conversationId)
     {
         using var dbContext = await context.CreateDbContextAsync();
@@ -53,13 +57,12 @@ public class ChatService : _BaseService, IChatService
         if (conversation == null)
             return false;
 
-        conversation.UpdatedOn = DateTime.UtcNow;
-
         conversation.Title = chatDtos.FirstOrDefault()?.Message ?? "New Conversation";
+
+        var mappedConveration = _mapper.Map<ConversationDto>(conversation);
 
         var chats = _mapper.Map<List<Chat>>(chatDtos);
         
-        dbContext.Conversations.Update(conversation);
         if (existingChats.Any())
         {
             dbContext.Chats.RemoveRange(existingChats); // Remove existing chats for the conversation
@@ -71,6 +74,7 @@ public class ChatService : _BaseService, IChatService
 
         if (result > 0)
         {
+            await _conversationService.UpdateConversationAsync(conversationId, mappedConveration);
             // Invalidate the cache since new chats were saved
             _cache.Remove(CacheKey);
         }
